@@ -41,12 +41,16 @@ const std::vector<float>& HighLevelFeatureExtractor::ExtractFeatures(
   // Allow the agent to go 10% over the playfield in any direction
   float tolerance_x = .1 * SP.pitchHalfLength();
   float tolerance_y = .1 * SP.pitchHalfWidth();
-  // Feature[0]: Xpostion
-  addFeature(self_pos.x);
+  if (playingOffense) { // Feature[0]: Xpostion
+    addNormFeature(self_pos.x, -tolerance_x, SP.pitchHalfLength() + tolerance_x);
+  } else {
+    addNormFeature(self_pos.x, -SP.pitchHalfLength()-tolerance_x, tolerance_x);
+  }
   // Feature[1]: YPosition
-  addFeature(self_pos.y);
+  addNormFeature(self_pos.y, -SP.pitchHalfWidth() - tolerance_y,
+                 SP.pitchHalfWidth() + tolerance_y);
   // Feature[2]: Self Angle
-  addFeature(self_ang);
+  addNormFeature(self_ang, -2*M_PI, 2*M_PI);
 
   float r;
   float th;
@@ -54,11 +58,11 @@ const std::vector<float>& HighLevelFeatureExtractor::ExtractFeatures(
   Vector2D ball_pos = wm.ball().pos();
   angleDistToPoint(self_pos, ball_pos, th, r);
   // Feature[3]: Dist to ball
-  addFeature(r);
+  addNormFeature(r, 0, maxR);
   // Feature[4]: Ang to ball
-  addFeature(th);
+  addNormFeature(th, -2*M_PI, 2*M_PI);
   // Feature[5]: Able to kick
-  addFeature(self.isKickable());
+  addNormFeature(self.isKickable(), false, true);
 
   // features about distance to goal center
   Vector2D goalCenter(SP.pitchHalfLength(), 0);
@@ -67,18 +71,18 @@ const std::vector<float>& HighLevelFeatureExtractor::ExtractFeatures(
   }
   angleDistToPoint(self_pos, goalCenter, th, r);
   // Feature[6]: Goal Center Distance
-  addFeature(r);
+  addNormFeature(r, 0, maxR); // Distance to goal center
   // Feature[7]: Angle to goal center
-  addFeature(th);
+  addNormFeature(th, -2*M_PI, 2*M_PI); // Ang to goal center
   // Feature[8]: largest open goal angle
-  addFeature(calcLargestGoalAngle(wm, self_pos));
+  addNormFeature(calcLargestGoalAngle(wm, self_pos), 0, M_PI);
 
   // Feature [9+T]: teammate's open angle to goal
   int detected_teammates = 0;
   for (PlayerCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
     const PlayerObject& teammate = *it;
     if (valid(teammate) && detected_teammates < numTeammates) {
-      addFeature(calcLargestGoalAngle(wm, teammate.pos()));
+      addNormFeature(calcLargestGoalAngle(wm, teammate.pos()), 0, M_PI);
       detected_teammates++;
     }
   }
@@ -90,7 +94,8 @@ const std::vector<float>& HighLevelFeatureExtractor::ExtractFeatures(
   // dist to our closest opp
   if (numOpponents > 0) {
     calcClosestOpp(wm, self_pos, th, r);
-    addFeature(r);
+    addNormFeature(r, 0, maxR);
+    //addNormFeature(th,-M_PI,M_PI);
 
     // teammates dists to closest opps
     detected_teammates = 0;
@@ -99,7 +104,7 @@ const std::vector<float>& HighLevelFeatureExtractor::ExtractFeatures(
       if (valid(teammate) && detected_teammates < numTeammates) {
         //addNormFeature(calcClosestOpp(wm,teammate.pos),0,maxR);
         calcClosestOpp(wm, teammate.pos(), th, r);
-        addFeature(r);
+        addNormFeature(r, 0, maxR);
         //addNormFeature(th,-M_PI,M_PI);
         detected_teammates++;
       }
@@ -115,7 +120,7 @@ const std::vector<float>& HighLevelFeatureExtractor::ExtractFeatures(
   for (PlayerCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
     const PlayerObject& teammate = *it;
     if (valid(teammate) && detected_teammates < numTeammates) {
-      addFeature(calcLargestTeammateAngle(wm, self_pos, teammate.pos()));
+      addNormFeature(calcLargestTeammateAngle(wm, self_pos, teammate.pos()),0,M_PI);
       detected_teammates++;
     }
   }
@@ -130,8 +135,8 @@ const std::vector<float>& HighLevelFeatureExtractor::ExtractFeatures(
     const PlayerObject& teammate = *it;
     if (valid(teammate) && detected_teammates < numTeammates) {
       angleDistToPoint(self_pos, teammate.pos(), th, r);
-      addFeature(r);
-      addFeature(th);
+      addNormFeature(r,0,maxR);
+      addNormFeature(th,-M_PI,M_PI);
       detected_teammates++;
     }
   }
@@ -142,7 +147,7 @@ const std::vector<float>& HighLevelFeatureExtractor::ExtractFeatures(
   }
 
   assert(featIndx == numFeatures);
-  // checkFeatures();
+  checkFeatures();
   //std::cout << "features: " << features.rows(0,ind-1).t();
   return feature_vec;
 }
