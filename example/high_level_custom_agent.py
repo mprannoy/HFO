@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 # First Start the server: $> bin/start.py
-import random, threading, argparse
+import random, threading, argparse, os
 try:
   from hfo import *
 except:
@@ -10,8 +10,14 @@ except:
     ' run: \"pip install .\"'
   exit()
 
-params = {'SHT_DST':1, 'SHT_ANG':-0.8,
-          'PASS_ANG':-0.66, 'DRIB_DST':-0.8}
+with open(os.path.join('./example/params.txt'), 'r') as f:
+  params = {'SHT_DST':float(f.readline().strip()),
+            'SHT_ANG':float(f.readline().strip()),
+            'PASS_ANG':float(f.readline().strip()),
+            'DRIB_DST':float(f.readline().strip())
+            }
+
+print str(params)
 
 def get_num_of_teammates(state):
   """Returns the number of teammates present
@@ -29,7 +35,7 @@ def can_shoot(goal_dist, goal_angle):
 
 def has_better_pos(dist_to_op, goal_angle, pass_angle, curr_goal_angle):
   """Returns True if teammate is in a better attacking position"""
-  if curr_goal_angle > goal_angle:
+  if curr_goal_angle > params['SHT_ANG']:
     return False
   if pass_angle < params['PASS_ANG']:
     return False
@@ -65,7 +71,7 @@ def play_hfo(num):
   hfo_env = hfo.HFOEnvironment()
   hfo_env.connectToAgentServer(6000 + num, HFO_Features.HIGH_LEVEL_FEATURE_SET)
   try:
-    for episode in xrange(10):
+    for episode in xrange(100):
       status = HFO_Status.IN_GAME
       while status == HFO_Status.IN_GAME:
         state = hfo_env.getState()

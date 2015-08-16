@@ -634,6 +634,13 @@ class Trainer(object):
     print 'Defense Captured   : %i' % self._numBallsCaptured
     print 'Balls Out of Bounds: %i' % self._numBallsOOB
     print 'Out of Time        : %i' % self._numOutOfTime
+    fname = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                        'cost.txt')
+    with open(fname, 'w') as f:
+        f.write(str(
+                    float(self._numGoals) / 
+                    (self._numTrials - self._numOutOfTime)
+                    ))
 
   def checkLive(self, necProcesses):
     """Returns true if each of the necessary processes is still alive and
@@ -681,7 +688,10 @@ class Trainer(object):
       print '[Trainer] Exiting'
     finally:
       for p in self._agentPopen:
-        p.send_signal(SIGINT)
+        try:
+          p.send_signal(SIGINT)
+        except:
+          pass
       try:
         self._comm.sendMsg('(bye)')
       except:
