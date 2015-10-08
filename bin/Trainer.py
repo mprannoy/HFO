@@ -86,6 +86,7 @@ class Trainer(object):
     self._playerHoldingBall = None # Player current in control of ball
     self._agentPopen = [] # Agent's processes
     self.initMsgHandlers()
+    self._prevNumGoals = 0
 
   def launch_agent(self, agent_num, play_offense, port):
     """Launch the learning agent using the start_agent.sh script and
@@ -611,6 +612,12 @@ class Trainer(object):
     self._numTrials += 1
     print '[Trainer] EndOfTrial: %d / %d %d %s'%\
       (self._numGoals, self._numTrials, self._frame, result)
+    if self._numTrials%100==0:
+        with open(str(self._numOffense)+'_'+str(self._serverPort)+'.txt','a') as f:
+      		f.write(str(self._numGoals-self._prevNumGoals)+','+str(self._numTrials)+'\n') 
+	self._prevNumGoals = self._numGoals		
+	
+
     self._numFrames += self._frame - self._lastTrialStart
     self._lastTrialStart = self._frame
     if (self._maxTrials > 0) and (self._numTrials >= self._maxTrials):
@@ -639,6 +646,11 @@ class Trainer(object):
     print '[Trainer] Defense Captured   : %i' % self._numBallsCaptured
     print '[Trainer] Balls Out of Bounds: %i' % self._numBallsOOB
     print '[Trainer] Out of Time        : %i' % self._numOutOfTime
+    with open(str(self._numOffense)+'_'+str(self._serverPort)+'.txt','a') as f:
+      		f.write('[Trainer] TotalFrames = %i, AvgFramesPerTrial = %.1f, AvgFramesPerGoal = %.1f'\
+      		%(self._numFrames,
+        	self._numFrames / float(self._numTrials) if self._numTrials > 0 else float('nan'),
+        	self._numGoalFrames / float(self._numGoals) if self._numGoals > 0 else float('nan'))) 
 
   def checkLive(self, necProcesses):
     """Returns true if each of the necessary processes is still alive and
